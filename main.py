@@ -11,7 +11,8 @@ def parse_args(args):
     parser = ap.ArgumentParser()
     parser.add_argument('--batch-size', type=int, default=1, help='The size of the batch')
     parser.add_argument('--dimensions', type=int, nargs=2, default=[384, 384], help='The size of the images fed in as input')
-    parser.add_argument('--epochs', type=int, default=100, help='The number of epochs to train on ')
+    parser.add_argument('--epochs', type=int, default=300, help='The number of epochs to train on ')
+    parser.add_argument('--data-file', default='./data/food_c101_n1000_r384x384x3.h5', help='The path to the dataset file')
     return parser.parse_args(args)
 
 def load_dataset(filename, split=None):
@@ -57,24 +58,25 @@ def main(argv):
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
 
-    train_x, train_y, test_x, test_y = load_dataset('/Users/austindoolittle/Downloads/food-images-food-101/food_c101_n1000_r384x384x3.h5')
+    train_x, train_y, test_x, test_y = load_dataset(args.data_file)
 
     test_index = 0
     for i in xrange(args.epochs):
+        print 'Epoch ' + str(i + 1) + '/' + str(args.epochs)
+
         np.random.shuffle(train_x)
         last_j = 0
         for j in xrange(0, train_x.shape[0], args.batch_size):
-            x = np.expand_dims(train_x[last_j:j, :, :, :], axis=0)
-            y = np.expand_dims(train_y[last_j:j, :, :, :], axis=0)
+            x = train_x[last_j:j, :, :, :]
+            y = train_y[last_j:j, :, :, :]
             sess.run(updates, {input_x: x, output_y: y})
             last_j = j
 
-        print 'Epoch ' + str(i) + '/' + str(args.epochs)
 
         print 'Writing example to file'
         actual_index = test_index % test_x.shape[0]
         test_index += 1
-        x = np.expand_dims(test_x[actual_index, :, :, :], axis=0)
+        x = test_x[actual_index:actual_index+1, :, :, :]
         out = sess.run(output_y_, {input_x: x})
         img = Image.fromarray(out[0, :, :, :], 'RGB')
         if not os.path.exists('./Images'):
